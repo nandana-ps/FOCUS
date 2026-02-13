@@ -62,5 +62,4 @@ app.post('/api/settings', async (req, res) => {
     await writeDB(data);
     res.json({ status: "success", message: "✅ Limits Updated!" });
 });
-
 app.listen(PORT, () => console.log(`🚀 FocusLock running at http://localhost:${PORT}`));
