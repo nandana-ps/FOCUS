@@ -1,107 +1,66 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const fs = require('fs-extra');
 const app = express();
 const PORT = 3000;
+const DATA_FILE = './data.json';
 
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// --- MOCK DATABASE ---
-let user = {
-    name: "Ambu",
-    exam_start: "2026-03-10", 
-    exam_end: "2026-03-24",
-    normal_limit: 60, 
-    last_settings_update: null,
-    exams: [
-        { subject: "Mathematics", date: "2026-03-10" },
-        { subject: "Physics", date: "2026-03-12" }
-    ]
-};
+async function readDB() { try { return await fs.readJson(DATA_FILE); } catch (e) { return {}; } }
+async function writeDB(data) { await fs.writeJson(DATA_FILE, data, { spaces: 2 }); }
 
-let websites = [
-    { id: 1, name: "YouTube", used: 10, limit: 60 },
-    { id: 2, name: "Instagram", used: 5, limit: 30 }
-];
-
-// --- SMART LOGIC ---
-function getModeAndLimit() {
+function getStatus(user) {
     const today = new Date();
+    today.setHours(0,0,0,0);
     const start = new Date(user.exam_start);
     const end = new Date(user.exam_end);
-    const prepStart = new Date(start);
-    prepStart.setDate(start.getDate() - 7);
+    const prep = new Date(start); 
+    prep.setDate(start.getDate() - 7);
 
-    // 🔴 EXAM SERIES
-    if (today >= start && today <= end) {
-        return { mode: "🔴 EXAM SERIES", limit: 15, message: "Strict Mode Active. Limits reduced to 15m." };
-    }
-    // 🟡 PREP WEEK
-    if (today >= prepStart && today < start) {
-        return { mode: "🟡 PREP WEEK", limit: Math.floor(user.normal_limit / 2), message: "Study Mode. Limits Halved." };
-    }
-    // 🟢 NORMAL
-    return { mode: "🟢 NORMAL", limit: user.normal_limit, message: "Normal Schedule Active." };
+    if (today >= start && today <= end) return { mode: "🔴 EXAM SERIES", limit: 15, msg: "Strict Mode: 15m Limit." };
+    if (today >= prep && today < start) return { mode: "🟡 PREP WEEK", limit: Math.floor(user.normal_limit/2), msg: "Study Mode: Limits Halved." };
+    return { mode: "🟢 NORMAL", limit: user.normal_limit, msg: "Normal Schedule Active." };
 }
 
-// --- API ROUTES ---
-app.get('/api/dashboard', (req, res) => {
-    const status = getModeAndLimit();
-    const dynamicWebsites = websites.map(w => ({
-        ...w,
-        limit: (w.name === "YouTube") ? status.limit : Math.floor(status.limit / 2)
-    }));
-    const sortedExams = user.exams.sort((a,b) => new Date(a.date) - new Date(b.date));
-    const nextExam = sortedExams.find(e => new Date(e.date) >= new Date()) || sortedExams[0];
-
-    res.json({
-        user,
-        mode: status.mode,
-        message: status.message,
-        websites: dynamicWebsites,
-        nextExam: nextExam
-    });
+app.post('/api/login', async (req, res) => {
+    const data = await readDB();
+    if (req.body.password === data.user.password) res.json({ status: "success", name: data.user.name });
+    else res.status(401).json({ status: "error" });
 });
 
-app.post('/api/settings', (req, res) => {
-    const { limit } = req.body;
-    const today = new Date();
-    const status = getModeAndLimit();
-
-    if (status.mode.includes("EXAM")) {
-        return res.json({ status: "error", message: "🚫 LOCKED! Cannot change limits during exams." });
-    }
-
-    if (user.last_settings_update) {
-        const lastUpdate = new Date(user.last_settings_update);
-        const diffDays = Math.ceil(Math.abs(today - lastUpdate) / (1000 * 60 * 60 * 24));
-        if (diffDays < 7) {
-            return res.json({ status: "error", message: `⏳ LOCKED! Discipline active. Wait ${7 - diffDays} days.` });
-        }
-    }
-
-    user.normal_limit = parseInt(limit);
-    user.last_settings_update = today.toISOString();
-    res.json({ status: "success", message: "✅ Settings Updated!" });
+app.get('/api/dashboard', async (req, res) => {
+    const data = await readDB();
+    const s = getStatus(data.user);
+    const sites = data.websites.map(w => ({ ...w, limit: (w.name === "YouTube" ? s.limit : Math.floor(s.limit/2)) }));
+    const next = data.user.exams.sort((a,b) => new Date(a.date) - new Date(b.date)).find(e => new Date(e.date) >= new Date());
+    res.json({ user: data.user, mode: s.mode, message: s.msg, websites: sites, nextExam: next || {subject: "None", date: "--"} });
 });
 
-app.post('/api/schedule', (req, res) => {
-    const { start, end } = req.body;
-    if(start) user.exam_start = start;
-    if(end) user.exam_end = end;
-    res.json({ status: "success", message: "📅 Series Range Updated!" });
+app.post('/api/save-range', async (req, res) => {
+    const data = await readDB();
+    data.user.exam_start = req.body.start;
+    data.user.exam_end = req.body.end;
+    await writeDB(data);
+    res.json({ status: "success" });
 });
 
-app.post('/api/add-exam', (req, res) => {
-    const { subject, date } = req.body;
-    if(subject && date) {
-        user.exams.push({ subject, date });
-        res.json({ status: "success", message: "✅ Exam Added to Calendar!" });
-    } else {
-        res.status(400).json({ status: "error", message: "Missing data" });
-    }
+app.post('/api/add-exam', async (req, res) => {
+    const data = await readDB();
+    data.user.exams.push(req.body);
+    await writeDB(data);
+    res.json({ status: "success" });
+});
+
+app.post('/api/settings', async (req, res) => {
+    const data = await readDB();
+    if (getStatus(data.user).mode.includes("EXAM")) return res.status(400).json({ message: "🚫 LOCKED during exams!" });
+    data.user.normal_limit = parseInt(req.body.limit);
+    await writeDB(data);
+    res.json({ status: "success", message: "✅ Limits Updated!" });
 });
 
 app.listen(PORT, () => console.log(`🚀 FocusLock running at http://localhost:${PORT}`));

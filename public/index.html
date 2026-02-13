@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusLock | Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #090807; color: #F9E1E0; font-family: sans-serif; }
+        .glass { background: rgba(255,255,255,0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .hidden { display: none; }
+        .calendar-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 14px; }
+        .has-exam { background: #C68283; color: black; font-weight: bold; box-shadow: 0 0 10px rgba(198, 130, 131, 0.4); }
+        .in-range { border: 1px solid #C68283; }
+    </style>
+</head>
+<body class="min-h-screen flex">
+    <div id="login-overlay" class="fixed inset-0 bg-black z-[100] flex items-center justify-center">
+        <div class="glass p-10 rounded-3xl text-center max-w-sm">
+            <h2 class="text-3xl font-bold mb-6">🔒 FocusLock</h2>
+            <input type="password" id="login-pass" placeholder="Password (123)" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 mb-4 text-center">
+            <button onclick="checkLogin()" class="w-full bg-[#C68283] text-black font-bold py-4 rounded-xl">Unlock Dashboard</button>
+        </div>
+    </div>
+
+    <aside class="w-64 border-r border-white/10 p-6 flex flex-col gap-8">
+        <div class="text-2xl font-bold">🔒 FocusLock</div>
+        <nav class="flex flex-col gap-4">
+            <button onclick="showScreen('dashboard')" class="text-left p-3 rounded-xl hover:bg-white/5 transition">Dashboard</button>
+            <button onclick="showScreen('schedule')" class="text-left p-3 rounded-xl hover:bg-white/5 transition">Exam Schedule</button>
+            <button onclick="showScreen('limits')" class="text-left p-3 rounded-xl hover:bg-white/5 transition">Website Limits</button>
+        </nav>
+        <div class="mt-auto p-4 glass rounded-2xl text-xs">Logged in as Ambu</div>
+    </aside>
+
+    <main class="flex-1 p-10 overflow-y-auto">
+        <section id="dashboard-screen">
+            <header class="flex justify-between items-end mb-10">
+                <div>
+                    <h1 class="text-4xl font-semibold mb-2" id="welcome-msg">Good morning.</h1>
+                    <p class="opacity-60" id="status-subtext">Loading status...</p>
+                </div>
+                <div id="mode-badge" class="px-4 py-1 bg-[#C68283]/20 border border-[#C68283]/30 rounded-full text-[#C68283] text-xs font-bold uppercase">MODE</div>
+            </header>
+            <div class="grid grid-cols-3 gap-6 mb-10">
+                <div class="glass p-6 rounded-3xl">
+                    <p class="text-xs opacity-50 uppercase mb-1">Next Exam</p>
+                    <h2 id="next-exam-subject" class="text-xl font-bold">--</h2>
+                    <p id="next-exam-date" class="text-xs text-[#C68283]">--</p>
+                </div>
+                <div class="glass p-6 rounded-3xl">
+                    <p class="text-xs opacity-50 uppercase mb-1">Reward Status</p>
+                    <h2 class="text-xl font-bold opacity-30 uppercase">Locked</h2>
+                </div>
+            </div>
+            <div id="websites-container" class="space-y-4"></div>
+        </section>
+
+        <section id="schedule-screen" class="hidden">
+            <h2 class="text-3xl font-semibold mb-8">Exam Schedule</h2>
+            <div class="grid grid-cols-2 gap-8">
+                <div class="space-y-6">
+                    <div class="glass p-6 rounded-3xl">
+                        <h3 class="text-lg font-bold mb-4">1. Series Range</h3>
+                        <label class="text-[10px] opacity-50 uppercase">Start Date</label>
+                        <input type="date" id="exam-start-input" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 mb-3 text-white">
+                        <label class="text-[10px] opacity-50 uppercase">End Date</label>
+                        <input type="date" id="exam-end-input" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 mb-4 text-white">
+                        <button onclick="saveRange()" class="w-full bg-white/10 py-2 rounded-xl">Update Range</button>
+                    </div>
+                    <div class="glass p-6 rounded-3xl border-[#C68283]/30">
+                        <h3 class="text-lg font-bold mb-4 text-[#C68283]">2. Add Specific Paper</h3>
+                        <input type="text" id="paper-name" placeholder="Subject Name" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 mb-3 text-white">
+                        <input type="date" id="paper-date" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 mb-4 text-white">
+                        <button onclick="addExamPaper()" class="w-full bg-[#C68283] text-black font-bold py-3 rounded-xl">Add to Calendar</button>
+                    </div>
+                </div>
+                <div class="glass p-6 rounded-3xl">
+                    <h3 class="text-center mb-6">March 2026</h3>
+                    <div id="calendar-grid" class="grid grid-cols-7 gap-2"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="limits-screen" class="hidden">
+            <h2 class="text-3xl font-semibold mb-8">Website Limits</h2>
+            <div class="glass p-8 rounded-3xl max-w-md">
+                <label class="block text-sm opacity-50 mb-4 text-center">Daily Limit (Minutes)</label>
+                <input type="number" id="limit-input" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 mb-6 text-center text-2xl font-bold" placeholder="60">
+                <button onclick="saveLimits()" class="w-full bg-[#EECAAD] text-black font-bold py-4 rounded-xl">Update Limits</button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+
+        // --- FIXED NAVIGATION ---
+        function showScreen(id) {
+            ['dashboard', 'schedule', 'limits'].forEach(s => {
+                document.getElementById(s + '-screen').classList.add('hidden');
+            });
+            document.getElementById(id + '-screen').classList.remove('hidden');
+        }
+
+        async function checkLogin() {
+            const password = document.getElementById('login-pass').value;
+            const res = await fetch(`${API_URL}/api/login`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ password })
+            });
+            if (res.ok) {
+                document.getElementById('login-overlay').style.display = 'none';
+                loadDashboard();
+            } else alert("Incorrect Password!");
+        }
+
+        async function loadDashboard() {
+            const res = await fetch(`${API_URL}/api/dashboard`);
+            const data = await res.json();
+            
+            document.getElementById('welcome-msg').innerText = `Good morning, ${data.user.name}.`;
+            document.getElementById('mode-badge').innerText = data.mode;
+            document.getElementById('status-subtext').innerText = data.message;
+            document.getElementById('next-exam-subject').innerText = data.nextExam.subject;
+            document.getElementById('next-exam-date').innerText = data.nextExam.date;
+            document.getElementById('exam-start-input').value = data.user.exam_start;
+            document.getElementById('exam-end-input').value = data.user.exam_end;
+
+            const container = document.getElementById('websites-container');
+            container.innerHTML = '';
+            data.websites.forEach(site => {
+                const pct = Math.min((site.used / site.limit) * 100, 100);
+                container.innerHTML += `
+                    <div class="glass p-5 rounded-2xl flex items-center justify-between">
+                        <div><p class="font-medium">${site.name}</p><p class="text-xs opacity-50">${site.limit}m Limit</p></div>
+                        <div class="w-64 h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div class="h-full bg-[#EECAAD]" style="width:${pct}%"></div>
+                        </div>
+                    </div>`;
+            });
+            renderCalendar(data.user);
+        }
+
+        function renderCalendar(user) {
+            const grid = document.getElementById('calendar-grid'); grid.innerHTML = '';
+            const start = new Date(user.exam_start);
+            const end = new Date(user.exam_end);
+
+            for (let i = 1; i <= 31; i++) {
+                const day = document.createElement('div');
+                day.className = 'calendar-day hover:bg-white/5';
+                day.innerText = i;
+                const dStr = `2026-03-${i.toString().padStart(2, '0')}`;
+                const checkDate = new Date(dStr);
+
+                if (checkDate >= start && checkDate <= end) day.classList.add('in-range');
+                if (user.exams.find(e => e.date === dStr)) day.classList.add('has-exam');
+                grid.appendChild(day);
+            }
+        }
+
+        async function saveRange() {
+            const start = document.getElementById('exam-start-input').value;
+            const end = document.getElementById('exam-end-input').value;
+            await fetch(`${API_URL}/api/save-range`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ start, end })
+            });
+            alert("📅 Range Updated!"); loadDashboard();
+        }
+
+        async function addExamPaper() {
+            const subject = document.getElementById('paper-name').value;
+            const date = document.getElementById('paper-date').value;
+            await fetch(`${API_URL}/api/add-exam`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ subject, date })
+            });
+            alert("✅ Paper Added!"); loadDashboard();
+        }
+
+        async function saveLimits() {
+            const limit = document.getElementById('limit-input').value;
+            const res = await fetch(`${API_URL}/api/settings`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ limit })
+            });
+            const data = await res.json();
+            alert(data.message); loadDashboard();
+        }
+    </script>
+</body>
+</html>
