@@ -4,7 +4,7 @@
     "password": "123",
     "exam_start": "2026-03-10",
     "exam_end": "2026-03-24",
-    "normal_limit": 3,
+    "normal_limit": 1,
     "exams": [
       {
         "subject": "english",
@@ -24,14 +24,15 @@
     {
       "id": 1,
       "name": "YouTube",
-      "used": 10,
+      "used": 0,
       "limit": 15
     },
     {
       "id": 2,
       "name": "Instagram",
-      "used": 5,
+      "used": 0,
       "limit": 10
     }
-  ]
+  ],
+  "lastUsageResetDate": "Sat Feb 14 2026"
 }

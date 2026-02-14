@@ -132,16 +132,27 @@
             container.innerHTML = '';
             data.websites.forEach(site => {
                 const pct = Math.min((site.used / site.limit) * 100, 100);
+                const statusColor = pct >= 100 ? 'bg-red-600' : pct >= 80 ? 'bg-yellow-600' : 'bg-green-600';
                 container.innerHTML += `
-                    <div class="glass p-5 rounded-2xl flex items-center justify-between">
-                        <div><p class="font-medium">${site.name}</p><p class="text-xs opacity-50">${site.limit}m Limit</p></div>
-                        <div class="w-64 h-2 bg-white/10 rounded-full overflow-hidden">
-                            <div class="h-full bg-[#EECAAD]" style="width:${pct}%"></div>
+                    <div class="glass p-6 rounded-2xl">
+                        <div class="flex justify-between mb-2">
+                            <span class="font-semibold">${site.name}</span>
+                            <span class="text-xs opacity-70">${site.used}m / ${site.limit}m</span>
+                        </div>
+                        <div class="w-full bg-white/10 rounded-full h-3 overflow-hidden">
+                            <div class="h-full ${statusColor} transition-all duration-300" style="width:${pct}%"></div>
                         </div>
                     </div>`;
             });
             renderCalendar(data.user);
         }
+
+        // Auto-refresh dashboard every 5 seconds
+        setInterval(() => {
+            if (!document.getElementById('login-overlay').style.display || document.getElementById('login-overlay').style.display === 'none') {
+                loadDashboard();
+            }
+        }, 5000);
 
         function renderCalendar(user) {
             const grid = document.getElementById('calendar-grid'); grid.innerHTML = '';
@@ -192,6 +203,7 @@
             });
             const data = await res.json();
             alert(data.message); loadDashboard();
+            console.log(data);
         }
     </script>
 </body>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FocusLock</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+  <div id="app" class="container">
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen">
+      <h1>FocusLock</h1>
+      <p class="subtitle">Regain your time.</p>
+
+      <div class="input-group">
+        <input type="password" id="password" placeholder="Enter Access Code">
+        <button id="login-btn">Unlock Dashboard</button>
+      </div>
+      <p id="error-msg" class="error hidden"></p>
+    </div>
+
+    <!-- Dashboard Screen -->
+    <div id="dashboard-screen" class="screen hidden">
+      <header>
+        <div class="user-info">
+          <span id="user-name">User</span>
+          <span class="badge" id="mode-badge">NORMAL</span>
+        </div>
+        <button id="logout-btn" class="icon-btn" title="Logout">⏻</button>
+      </header>
+
+      <div class="status-card" id="status-card">
+        <p id="status-msg">All systems normal.</p>
+      </div>
+
+      <div class="usage-section">
+        <h3>Daily Usage</h3>
+        <div id="usage-list">
+          <!-- Usage items injected here -->
+        </div>
+      </div>
+
+      <div class="next-event">
+        <span>Next Exam:</span>
+        <strong id="next-exam-date">--</strong>
+        <p id="next-exam-subject" class="subject">--</p>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="dist/popup.js" type="module"></script>
+</body>
+
+</html>

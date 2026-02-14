@@ -1,0 +1,8 @@
+=== Supabase Connection Test ===
+URL: https://qzpgigcwgudmijtrzmrl.supabase.co
+Key starts with: sb_publishable_Tdv8n-7UhNbjuo-
+
+Profile data: {"id":"00000000-0000-0000-0000-000000000001","email":"singleuser@focuslock.app","full_name":"Focus Master","updated_at":null,"settings":{"exam_end":null,"exam_start":null,"normal_limit":1}}
+Profile error: null
+Usage data: []
+Usage error: null

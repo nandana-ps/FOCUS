@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusLock Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --text-main: #f0f6fc;
+            --text-muted: #8b949e;
+            --primary: #58a6ff;
+            --danger: #f85149;
+            --warning: #dbbf2d;
+            --success: #2ea043;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            display: flex;
+            justify-content: center;
+            padding-top: 50px;
+        }
+
+        .container {
+            width: 400px;
+            padding: 20px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, #58a6ff, #8a2be2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .usage-item {
+            background: #0d1117;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #30363d;
+        }
+
+        .site-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #21262d;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s;
+        }
+
+        .progress-fill.danger {
+            background: var(--danger);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>FocusLock</h1>
+            <div id="status">Loading...</div>
+        </header>
+
+        <div id="usage-list"></div>
+    </div>
+
+    <!-- Import Supabase from simple CDN implementation or bundled JS -->
+    <!-- Since we already use esbuild for the extension, we can reuse the logic or just use a module script referencing the same file if served correctly -->
+    <!-- TO KEEP IT SIMPLE, we'll use the CDN version here for the web app to avoid build step complexities for the web part -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module">
+        // Re-using the keys from your client file (hardcoded for the web dashboard convenience)
+        const SUPABASE_URL = 'https://qzpgigcwgudmijtrzmrl.supabase.co'
+        const SUPABASE_ANON_KEY = 'sb_publishable_Tdv8n-7UhNbjuo-71kxM_Q_c3mbcIK4'
+        const USER_ID = '00000000-0000-0000-0000-000000000001';
+
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function loadDashboard() {
+            const today = new Date().toISOString().split('T')[0];
+
+            // Fetch Profile
+            const { data: profile } = await db.from('profiles').select('settings').eq('id', USER_ID).single();
+            const limit = profile?.settings?.normal_limit || 60;
+
+            // Fetch Usage
+            const { data: usage } = await db.from('usage_logs').select('*').eq('user_id', USER_ID).eq('date', today).single();
+
+            const list = document.getElementById('usage-list');
+            list.innerHTML = '';
+
+            const data = [
+                { name: 'YouTube', used: usage?.youtube_mins || 0, limit: limit },
+                { name: 'Instagram', used: usage?.instagram_mins || 0, limit: limit }
+            ];
+
+            data.forEach(site => {
+                const percent = Math.min(100, (site.used / site.limit) * 100);
+                const isDanger = percent >= 100;
+
+                list.innerHTML += `
+               <div class="usage-item">
+                  <div class="site-header">
+                      <span>${site.name}</span>
+                      <span>${site.used}m / ${site.limit}m</span>
+                  </div>
+                  <div class="progress-bar">
+                      <div class="progress-fill ${isDanger ? 'danger' : ''}" style="width: ${percent}%"></div>
+                  </div>
+              </div>
+            `;
+            });
+
+            document.getElementById('status').textContent = "Live";
+            document.getElementById('status').style.color = "#2ea043";
+        }
+
+        loadDashboard();
+        setInterval(loadDashboard, 5000); // Live update every 5s
+    </script>
+</body>
+
+</html>

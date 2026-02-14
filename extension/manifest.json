@@ -2,10 +2,26 @@
   "manifest_version": 3,
   "name": "FocusLock Guard",
   "version": "1.0",
-  "description": "Monitors and blocks YouTube based on FocusLock limits.",
-  "permissions": ["tabs", "storage"],
-  "host_permissions": ["*://*.youtube.com/*", "http://localhost:3000/*"],
+  "description": "Your personal productivity guardian. Tracks and limits distractingly good websites.",
+  "permissions": [
+    "tabs",
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "*://*.youtube.com/*",
+    "*://*.instagram.com/*",
+    "http://localhost:3000/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "FocusLock"
+  },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "dist/background.js"
+  },
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
   }
 }
